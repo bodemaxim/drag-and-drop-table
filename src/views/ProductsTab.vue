@@ -6,7 +6,9 @@ import { VueDraggableNext } from 'vue-draggable-next'
 
 import Navbar from '@/views/Navbar.vue'
 
-import type { ITableRow } from '@/interfaces/ITableRow'
+import { getProducts, updateProducts } from '@/api/ProductsAPI'
+
+import type { IProduct, IProductInTable } from '@/interfaces/IProduct'
 
 export default defineComponent({
   components: {
@@ -15,9 +17,9 @@ export default defineComponent({
   },
   setup() {
     //#region Вымышленные данные.
-    const sampleData: ITableRow[] = [
+    const sampleData: IProductInTable[] = [
       {
-        unitName: 'морковь',
+        unitName: 'бампер',
         price: '100',
         quantity: '2',
         productName: 'product1',
@@ -25,7 +27,7 @@ export default defineComponent({
         isPlaceholder: false
       },
       {
-        unitName: 'помидоры',
+        unitName: 'крыло',
         price: '200',
         quantity: '3',
         productName: 'product2',
@@ -33,7 +35,7 @@ export default defineComponent({
         isPlaceholder: false
       },
       {
-        unitName: 'огурцы',
+        unitName: 'колесо',
         price: '300',
         quantity: '4',
         productName: 'product3',
@@ -41,7 +43,7 @@ export default defineComponent({
         isPlaceholder: false
       },
       {
-        unitName: 'картофель',
+        unitName: 'руль',
         price: '400',
         quantity: '5',
         productName: 'product4',
@@ -55,12 +57,71 @@ export default defineComponent({
     /**
      * Данные таблицы.
      */
-    const tableData: Ref<ITableRow[]> = ref<ITableRow[]>(sampleData)
+    const tableData: Ref<IProductInTable[]> = ref<IProductInTable[]>(sampleData)
     //#endregion Данные.
 
     //#region Методы.
+    /**
+     * Загрузить таблицу.
+     */
+    const loadProducts = async () => {
+      try {
+        const data: IProduct[] = await getProducts()
+        /* tableData.value = []
+        tableData.value = data.map((item) => {
+          return {
+            ...item,
+            isPlaceholder: false
+          }
+        }) */
+      } catch (error) {
+        console.log(error)
+      } finally {
+        addPseudoItem()
+      }
+    }
+
+    /**
+     * Сохранить таблицу.
+     */
+    const saveProducts = async () => {
+      try {
+        const data: IProduct[] = await updateProducts(tableData.value)
+        /* tableData.value = []
+        tableData.value = data.map((item) => {
+          return {
+            ...item,
+            isPlaceholder: false
+          }
+        }) */
+      } catch (error) {
+        console.log(error)
+      } finally {
+        addPseudoItem()
+      }
+    }
+    /**
+     * Добавить невидимый элемент в начало списка продуктов
+     * (нужно для правильной работы пунктирного плейсхолдера).
+     */
+    const addPseudoItem = () => {
+      const pseudoItem: IProductInTable = {
+        unitName: '',
+        price: '',
+        quantity: '',
+        productName: '',
+        total: '',
+        isPlaceholder: false
+      }
+
+      tableData.value.splice(0, 0, pseudoItem)
+    }
+
+    /**
+     * Добавить новый продукт в таблицу.
+     */
     const addRow = () => {
-      const newRow: ITableRow = {
+      const newRow: IProductInTable = {
         unitName: '',
         price: '',
         quantity: '',
@@ -70,6 +131,13 @@ export default defineComponent({
       }
 
       tableData.value = [...tableData.value, newRow]
+    }
+
+    /**
+     * Сохранить таблицу.
+     */
+    const save = () => {
+      console.log('Ajax запрос Сохранить данные')
     }
     //#endregion Методы.
 
@@ -92,7 +160,7 @@ export default defineComponent({
         if (e.draggedContext.index !== e.draggedContext.futureIndex) {
           isPlaceholderCreated = true
 
-          const placeholderItem: ITableRow = {
+          const placeholderItem: IProductInTable = {
             unitName: '',
             price: '',
             quantity: '',
@@ -111,16 +179,7 @@ export default defineComponent({
     }
 
     onMounted(() => {
-      const pseudoItem: ITableRow = {
-        unitName: '',
-        price: '',
-        quantity: '',
-        productName: '',
-        total: '',
-        isPlaceholder: false
-      }
-
-      tableData.value.splice(0, 0, pseudoItem)
+      loadProducts()
     })
     //#endregion Drag & Drop.
 
@@ -129,7 +188,8 @@ export default defineComponent({
       tableData,
       addRow,
       onDragEnd,
-      checkMove
+      checkMove,
+      save
     }
   }
 })
@@ -158,7 +218,8 @@ export default defineComponent({
       <Navbar :page="'products'" />
 
       <section class="section">
-        <button class="create-button" @click="addRow">+ Добавить строку</button>
+        <button class="blue-button" @click="addRow">+ Добавить строку</button>
+        <button class="blue-button" @click="save">Сохранить</button>
       </section>
 
       <section class="section">
@@ -194,11 +255,11 @@ export default defineComponent({
               }"
             >
               <td class="cell">
-                <button class="cell-content-btn">A</button>
+                <button class="cell-content-btn">↕</button>
                 <p class="cell-content-right-el">{{ index + 1 }}</p>
               </td>
               <td class="cell" colspan="2">
-                <button class="cell-content-btn">B</button>
+                <button class="cell-content-btn">X</button>
                 <input
                   class="cell-content-right-el"
                   type="text"
@@ -228,7 +289,6 @@ export default defineComponent({
         </table>
         <div class="white-fade"></div>
       </section>
-      <section class="section"></section>
     </div>
     <h3 class="no-mobile-yet">Мобильная версия сайта находится в разработке.</h3>
   </main>
@@ -279,7 +339,7 @@ export default defineComponent({
 }
 
 /* Кнопка Создать */
-.create-button {
+.blue-button {
   margin: 10px 30px;
   background-color: #2f8cff;
   border: none;
@@ -290,7 +350,7 @@ export default defineComponent({
   transition: all 0.3s ease-in-out;
 }
 
-.create-button:hover {
+.blue-button:hover {
   background-color: black;
 }
 
